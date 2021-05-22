@@ -18,7 +18,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate /* 追加 */  {
     let groundCategory: UInt32 = 1 << 1     // 0...00010
     let wallCategory: UInt32 = 1 << 2       // 0...00100
     let scoreCategory: UInt32 = 1 << 3      // 0...01000
-    let scoreCategoryItem: UInt32 = 1 << 3      // 0...01000
+    let scoreCategoryItem: UInt32 = 1 << 4      // 0...01000
 
     // スコア用
     var score = 0  // ←追加
@@ -241,19 +241,27 @@ class GameScene: SKScene, SKPhysicsContactDelegate /* 追加 */  {
             wall.addChild(upper)
             
             // スコアアップ用のノード --- ここから ---
-            let scoreNode = SKSpriteNode(imageNamed: "coin")
-            scoreNode.size = CGSize(width: 40, height: 40 )
-//            scoreNode.position = CGPoint(x: upper.size.width + birdSize.width / 2, y: self.frame.height / 2)
-            scoreNode.position = CGPoint(x: 0 , y: center_y + random_y - 50 )
-            
-//            scoreNode.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: upper.size.width, height: self.frame.size.height))
-            scoreNode.physicsBody = SKPhysicsBody(rectangleOf: scoreNode.size)
-            scoreNode.physicsBody?.affectedByGravity = false
+            let scoreNode = SKNode()
+            scoreNode.position = CGPoint(x: upper.size.width + birdSize.width / 2, y: self.frame.height / 2)
+            scoreNode.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: upper.size.width, height: self.frame.size.height))
             scoreNode.physicsBody?.isDynamic = false
             scoreNode.physicsBody?.categoryBitMask = self.scoreCategory
             scoreNode.physicsBody?.contactTestBitMask = self.birdCategory
-            
+
             wall.addChild(scoreNode)
+            // --- ここまで追加 ---
+            
+            // アイテム用のノード --- ここから ---
+            let coinNode = SKSpriteNode(imageNamed: "coin")
+            coinNode.size = CGSize(width: 40, height: 40 )
+            coinNode.position = CGPoint(x: 0 , y: center_y + random_y - 30 )
+            coinNode.physicsBody = SKPhysicsBody(rectangleOf: coinNode.size)
+            coinNode.physicsBody?.affectedByGravity = false
+            coinNode.physicsBody?.isDynamic = false
+            coinNode.physicsBody?.categoryBitMask = self.scoreCategoryItem
+            coinNode.physicsBody?.contactTestBitMask = self.birdCategory
+            
+            wall.addChild(coinNode)
             // --- ここまで追加 ---
             
             wall.run(wallAnimation)
@@ -287,28 +295,22 @@ class GameScene: SKScene, SKPhysicsContactDelegate /* 追加 */  {
         if scrollNode.speed <= 0 {
             return
         }
-        if (contact.bodyA.categoryBitMask) == scoreCategory && (contact.bodyB.categoryBitMask) == birdCategory {
+        if (contact.bodyA.categoryBitMask & scoreCategory) == scoreCategory || (contact.bodyB.categoryBitMask & scoreCategory) == scoreCategory {
             // スコア用の物体と衝突した
-            //サウンドアクションを作成する。
-            let action = SKAction.playSoundFileNamed("coin.mp3", waitForCompletion: true)
-            let actionAll = SKAction.sequence([action])
-
-            self.run(actionAll)
             print("ScoreUp")
             score += 1
-            Itemscore += 1
             scoreLabelNode.text = "Score:\(score)"
-            ItemscoreLabelNode.text = "ItemScore:\(Itemscore)"
-
-            contact.bodyA.node?.removeFromParent()
+            
         } else {
-            if (contact.bodyA.categoryBitMask) == birdCategory && (contact.bodyB.categoryBitMask) == scoreCategory {
-                print("ScoreUp")
-                score += 1
+            if (contact.bodyA.categoryBitMask & scoreCategoryItem) == scoreCategoryItem || (contact.bodyB.categoryBitMask & scoreCategoryItem) == scoreCategoryItem {
+                //サウンドアクションを作成する。
+                let action = SKAction.playSoundFileNamed("coin.mp3", waitForCompletion: true)
+                let actionAll = SKAction.sequence([action])
+                self.run(actionAll)
+                contact.bodyA.node?.removeFromParent()
+                print("CoinGet")
                 Itemscore += 1
-                scoreLabelNode.text = "Score:\(score)"
                 ItemscoreLabelNode.text = "ItemScore:\(Itemscore)"
-                contact.bodyB.node?.removeFromParent()
             } else {
                 var bestScore = userDefaults.integer(forKey: "BEST")
                 if (score + Itemscore)  > bestScore {
